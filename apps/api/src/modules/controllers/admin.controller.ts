@@ -1,6 +1,11 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { IsBoolean, IsOptional, IsString, Matches, MinLength } from "class-validator";
-import { SessionGuard } from "../guards/session.guard.js";
+import { UserRole } from "@prisma/client";
+import { hash } from "argon2";
+import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, Matches, MinLength } from "class-validator";
+import { CurrentUser } from "../decorators/current-user.decorator.js";
+import { Roles } from "../decorators/roles.decorator.js";
+import { RolesGuard } from "../guards/roles.guard.js";
+import type { SessionUser } from "../guards/session.guard.js";
 import { PrismaService } from "../services/prisma.service.js";
 
 class CreateBranchDto {
@@ -69,8 +74,41 @@ class UpdateCounterDto {
   isOpen?: boolean;
 }
 
+class CreateUserDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @MinLength(2)
+  name!: string;
+
+  @IsString()
+  @MinLength(8)
+  password!: string;
+
+  @IsEnum(UserRole)
+  role!: UserRole;
+}
+
+class UpdateUserDto {
+  @IsString()
+  @IsOptional()
+  @MinLength(2)
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(8)
+  password?: string;
+
+  @IsEnum(UserRole)
+  @IsOptional()
+  role?: UserRole;
+}
+
 @Controller("admin")
-@UseGuards(SessionGuard)
+@UseGuards(RolesGuard)
+@Roles("OWNER", "ADMIN")
 export class AdminController {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -124,5 +162,46 @@ export class AdminController {
   @Patch("counters/:counterId")
   async updateCounter(@Param("counterId") counterId: string, @Body() body: UpdateCounterDto) {
     return this.prisma.counter.update({ where: { id: counterId }, data: body });
+  }
+
+  @Post("users")
+  async createUser(@CurrentUser() user: SessionUser, @Body() body: CreateUserDto) {
+    const organization = await this.prisma.organization.findUniqueOrThrow({ where: { id: user.organizationId } });
+    const created = await this.prisma.user.create({
+      data: {
+        organizationId: organization.id,
+        email: body.email.toLowerCase(),
+        name: body.name,
+        role: body.role,
+        passwordHash: await hash(body.password)
+      },
+      select: { id: true, email: true, name: true, role: true, createdAt: true }
+    });
+
+    await this.prisma.auditEvent.create({
+      data: { actorId: user.id, action: "user.created", entity: "user", entityId: created.id, metadata: { role: created.role } }
+    });
+
+    return created;
+  }
+
+  @Patch("users/:userId")
+  async updateUser(@CurrentUser() actor: SessionUser, @Param("userId") userId: string, @Body() body: UpdateUserDto) {
+    const data: { name?: string; role?: UserRole; passwordHash?: string } = {};
+    if (body.name) data.name = body.name;
+    if (body.role) data.role = body.role;
+    if (body.password) data.passwordHash = await hash(body.password);
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, email: true, name: true, role: true, createdAt: true }
+    });
+
+    await this.prisma.auditEvent.create({
+      data: { actorId: actor.id, action: "user.updated", entity: "user", entityId: updated.id, metadata: { role: updated.role } }
+    });
+
+    return updated;
   }
 }

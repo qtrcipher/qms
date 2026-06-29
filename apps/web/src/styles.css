@@ -14,7 +14,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -26,6 +27,11 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
+  outline: 3px solid #c0d86d;
+  outline-offset: 2px;
+}
+
+select:focus-visible {
   outline: 3px solid #c0d86d;
   outline-offset: 2px;
 }
@@ -270,7 +276,8 @@ label {
   gap: 6px;
 }
 
-input {
+input,
+select {
   border: 1px solid #bfd8c8;
   border-radius: 8px;
   min-height: 44px;

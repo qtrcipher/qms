@@ -272,6 +272,10 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
   const [serviceName, setServiceName] = useState("");
   const [servicePrefix, setServicePrefix] = useState("");
   const [counterName, setCounterName] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [userRole, setUserRole] = useState("AGENT");
 
   useEffect(() => {
     if (user) void loadAdmin();
@@ -325,6 +329,20 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
     await loadAdmin();
   }
 
+  async function createUser(event: FormEvent) {
+    event.preventDefault();
+    await api<User>("/admin/users", {
+      method: "POST",
+      body: { name: userName, email: userEmail, password: userPassword, role: userRole }
+    });
+    setUserName("");
+    setUserEmail("");
+    setUserPassword("");
+    setUserRole("AGENT");
+    setMessage("User created");
+    await loadAdmin();
+  }
+
   return (
     <section className="page-grid">
       <Panel title="Branches" icon={<Building2 size={18} />}>
@@ -369,6 +387,31 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
         <form onSubmit={(event) => void createCounter(event)} className="form-grid">
           <label>Counter name<input value={counterName} onChange={(event) => setCounterName(event.target.value)} required /></label>
           <button className="primary-button">Add counter</button>
+        </form>
+      </Panel>
+      <Panel title="Users" icon={<UserRound size={18} />}>
+        <div className="table-list">
+          {overview?.organization?.users.map((account) => (
+            <div key={account.id}>
+              <strong>{account.name}</strong>
+              <span>{account.role} · {account.email}</span>
+            </div>
+          ))}
+        </div>
+        <form onSubmit={(event) => void createUser(event)} className="form-grid">
+          <label>Name<input value={userName} onChange={(event) => setUserName(event.target.value)} required /></label>
+          <label>Email<input type="email" value={userEmail} onChange={(event) => setUserEmail(event.target.value)} required /></label>
+          <label>Password<input type="password" minLength={8} value={userPassword} onChange={(event) => setUserPassword(event.target.value)} required /></label>
+          <label>
+            Role
+            <select value={userRole} onChange={(event) => setUserRole(event.target.value)}>
+              <option value="ADMIN">Admin</option>
+              <option value="BRANCH_MANAGER">Branch manager</option>
+              <option value="AGENT">Agent</option>
+              <option value="DISPLAY">Display</option>
+            </select>
+          </label>
+          <button className="primary-button">Add user</button>
         </form>
       </Panel>
     </section>

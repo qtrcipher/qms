@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Post, UseGuards } from "@nestjs/common";
 import { IsOptional, IsString } from "class-validator";
-import { SessionGuard } from "../guards/session.guard.js";
+import { Roles } from "../decorators/roles.decorator.js";
+import { RolesGuard } from "../guards/roles.guard.js";
 import { QueueService } from "../services/queue.service.js";
 
 class StaffActionDto {
@@ -15,7 +16,8 @@ class TransferDto {
 }
 
 @Controller("staff")
-@UseGuards(SessionGuard)
+@UseGuards(RolesGuard)
+@Roles("OWNER", "ADMIN", "BRANCH_MANAGER", "AGENT")
 export class StaffController {
   constructor(private readonly queue: QueueService) {}
 

@@ -55,6 +55,8 @@ Seed admin:
 - Kiosk ticket creation and QR/web join flow
 - QR ticket tracking with queue position and estimated wait time
 - Protected staff actions: call next, recall, start, complete, no-show, requeue, cancel, transfer
+- Role-based access control for owners, admins, branch managers, agents, and display users
+- Admin user creation and role assignment
 - Public display state and customer ticket tracking
 - Built-in email/password session auth with httpOnly cookies
 - WebSocket queue updates

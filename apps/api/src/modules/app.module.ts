@@ -7,6 +7,7 @@ import { HealthController } from "./controllers/health.controller.js";
 import { PublicController } from "./controllers/public.controller.js";
 import { StaffController } from "./controllers/staff.controller.js";
 import { TicketsController } from "./controllers/tickets.controller.js";
+import { RolesGuard } from "./guards/roles.guard.js";
 import { SessionGuard } from "./guards/session.guard.js";
 import { QueueGateway } from "./queue.gateway.js";
 import { AuthService } from "./services/auth.service.js";
@@ -17,6 +18,6 @@ import { QueueService } from "./services/queue.service.js";
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true })],
   controllers: [AdminController, AuthController, DisplayController, HealthController, PublicController, StaffController, TicketsController],
-  providers: [AuthService, NotificationsService, PrismaService, QueueGateway, QueueService, SessionGuard]
+  providers: [AuthService, NotificationsService, PrismaService, QueueGateway, QueueService, RolesGuard, SessionGuard]
 })
 export class AppModule {}
