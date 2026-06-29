@@ -29,7 +29,8 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine

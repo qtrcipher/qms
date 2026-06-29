@@ -33,7 +33,7 @@ docker compose up --build
 - API health: http://localhost:3000/health
 - Mailpit: http://localhost:8025
 
-The API container applies the Prisma schema and loads seed data on startup for the current MVP. Replace development secrets in `.env` before any production deployment.
+The API container applies the Prisma schema and loads seed data on startup for the current MVP. Use `docker compose ps` to confirm `api`, `web`, `postgres`, and `redis` are healthy or running before testing browser flows. Replace development secrets in `.env` before any production deployment.
 
 Useful web routes:
 

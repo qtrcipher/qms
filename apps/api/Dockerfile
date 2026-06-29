@@ -20,5 +20,6 @@ RUN pnpm db:generate && pnpm --filter @qms/domain build && pnpm --filter @qms/ap
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm db:push && pnpm db:seed && pnpm --filter @qms/api start"]
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=10 CMD node -e "fetch('http://127.0.0.1:3000/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 
+CMD ["sh", "-c", "pnpm db:push && pnpm db:seed && pnpm --filter @qms/api start"]
