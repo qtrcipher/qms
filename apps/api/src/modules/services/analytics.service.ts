@@ -41,9 +41,9 @@ function safeCsv(value: string | number | null | undefined) {
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async summary(start?: string, end?: string) {
+  async summary(start?: string, end?: string, branchId?: string) {
     const range = this.dateRange(start, end);
-    const tickets = await this.ticketsInRange(range.start, range.end);
+    const tickets = await this.ticketsInRange(range.start, range.end, branchId);
 
     const byStatus = tickets.reduce<Record<TicketStatus, number>>((acc, ticket) => {
       acc[ticket.status] = (acc[ticket.status] ?? 0) + 1;
@@ -86,7 +86,7 @@ export class AnalyticsService {
     }));
 
     return {
-      range: { start: range.start.toISOString(), end: range.end.toISOString() },
+      range: { start: range.start.toISOString(), end: range.end.toISOString(), branchId: branchId ?? null },
       totals: {
         issued: tickets.length,
         waiting: byStatus.WAITING ?? 0,
@@ -116,9 +116,9 @@ export class AnalyticsService {
     };
   }
 
-  async ticketsCsv(start?: string, end?: string) {
+  async ticketsCsv(start?: string, end?: string, branchId?: string) {
     const range = this.dateRange(start, end);
-    const tickets = await this.ticketsInRange(range.start, range.end);
+    const tickets = await this.ticketsInRange(range.start, range.end, branchId);
     const header = ["code", "status", "branch", "service", "counter", "issuedAt", "calledAt", "startedAt", "completedAt", "waitMinutes", "serviceMinutes"];
     const rows = tickets.map((ticket) => [
       ticket.code,
@@ -144,12 +144,11 @@ export class AnalyticsService {
     return { start: rangeStart, end: rangeEnd };
   }
 
-  private ticketsInRange(start: Date, end: Date) {
+  private ticketsInRange(start: Date, end: Date, branchId?: string) {
     return this.prisma.ticket.findMany({
-      where: { issuedAt: { gte: start, lt: end } },
+      where: { issuedAt: { gte: start, lt: end }, ...(branchId ? { branchId } : {}) },
       include: { branch: true, service: true, counter: true },
       orderBy: { issuedAt: "asc" }
     });
   }
 }
-

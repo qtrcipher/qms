@@ -43,8 +43,8 @@ Useful web routes:
 - `/admin`: branch, service, and counter setup
 - `/join/main`: customer QR join flow for the seeded branch
 - `/ticket/:id`: customer ticket status, position, and ETA
-- `/analytics/summary`: protected operational analytics API
-- `/analytics/tickets.csv`: protected ticket CSV export
+- `/analytics/summary`: protected operational analytics API with optional `start`, `end`, and `branchId` filters
+- `/analytics/tickets.csv`: protected ticket CSV export with the same filters
 
 Seed admin:
 
@@ -59,7 +59,7 @@ Seed admin:
 - Protected staff actions: counter selection, call next, recall, start, complete, no-show, requeue, cancel, transfer
 - Role-based access control for owners, admins, branch managers, agents, and display users
 - Admin creation and editing for services, counters, and user roles
-- Basic analytics for issued tickets, completion/no-show rates, wait time, service time, and CSV export
+- Basic analytics for issued tickets, completion/no-show rates, wait time, service time, branch/date filtering, and CSV export
 - Configurable ticket retention and manual purge for old terminal tickets
 - Public display state and customer ticket tracking
 - Built-in email/password session auth with httpOnly cookies

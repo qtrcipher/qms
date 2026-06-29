@@ -21,6 +21,20 @@ test("admin can edit service, counter, and user records", async ({ page }) => {
   const branchesPanel = page.locator(".panel", { has: page.getByRole("heading", { name: "Branches" }) });
   await expect(branchesPanel.getByLabel("Manage branch")).toHaveValue(/.+/);
 
+  const todayPanel = page.locator(".panel", { has: page.getByRole("heading", { name: "Today" }) });
+  const today = new Date().toISOString().slice(0, 10);
+  const analyticsBranch = todayPanel.getByLabel("Analytics branch");
+  await analyticsBranch.selectOption({ index: 1 });
+  const selectedAnalyticsBranchId = await analyticsBranch.inputValue();
+  await todayPanel.getByLabel("Start date").fill(today);
+  await todayPanel.getByLabel("End date").fill(today);
+  await todayPanel.getByRole("button", { name: "Apply filters" }).click();
+  await expect(page.getByRole("status")).toContainText("Analytics filters applied");
+  const exportHref = await todayPanel.getByRole("link", { name: "Export CSV" }).getAttribute("href");
+  expect(exportHref).toContain(`start=${today}`);
+  expect(exportHref).toContain(`end=${today}`);
+  expect(exportHref).toContain(`branchId=${selectedAnalyticsBranchId}`);
+
   await page.getByLabel("Ticket retention days").fill("180");
   await page.getByRole("button", { name: "Save retention" }).click();
   await expect(page.getByRole("status")).toContainText("Retention settings updated");

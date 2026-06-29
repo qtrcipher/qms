@@ -9,7 +9,7 @@ This roadmap tracks the open-source core. Items may move as the project learns f
 - QR join and ticket tracking
 - Role-based access control
 - Admin editing for services, counters, and users
-- Basic analytics and CSV export
+- Basic analytics, branch/date filtering, and CSV export
 - Configurable ticket retention and purge action
 - Configurable SMTP email templates and mock SMS notifications
 - Accessibility foundation for skip navigation, page titles, route state, focus visibility, and page landmarks
@@ -19,12 +19,11 @@ This roadmap tracks the open-source core. Items may move as the project learns f
 
 ## Next
 
-- Analytics filtering UI for branch/date ranges
+- Backup and restore documentation
 
 ## Later
 
 - WhatsApp/SMS provider plugins
 - Appointments and walk-in blending
 - Multi-branch dashboards
-- Backup and restore documentation
 - Public demo environment

@@ -437,6 +437,18 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.analytics-filters {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.analytics-filters .primary-button {
+  align-self: end;
+  width: 100%;
+}
+
 .metric {
   background: #f7f8f4;
   border: 1px solid #dfe5dc;
@@ -552,7 +564,8 @@ textarea {
   .customer-fields,
   .notification-server-fields,
   .status-metrics,
-  .metric-grid {
+  .metric-grid,
+  .analytics-filters {
     grid-template-columns: 1fr;
   }
 }

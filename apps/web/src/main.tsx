@@ -24,6 +24,7 @@ type NotificationSettings = {
 type AdminOverview = { organization: ({ name: string; ticketRetentionDays: number; branches: Branch[]; users: User[] } & NotificationSettings) | null };
 type PurgeResult = { deleted: number; cutoff: string; retentionDays: number };
 type AnalyticsSummary = {
+  range: { start: string; end: string; branchId: string | null };
   totals: {
     issued: number;
     waiting: number;
@@ -364,6 +365,9 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
   const [branchName, setBranchName] = useState("");
   const [branchSlug, setBranchSlug] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
+  const [analyticsBranchId, setAnalyticsBranchId] = useState("");
+  const [analyticsStart, setAnalyticsStart] = useState(todayInputValue());
+  const [analyticsEnd, setAnalyticsEnd] = useState(todayInputValue());
   const [serviceName, setServiceName] = useState("");
   const [servicePrefix, setServicePrefix] = useState("");
   const [counterName, setCounterName] = useState("");
@@ -386,9 +390,15 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
     if (user) void loadAdmin();
   }, [user]);
 
+  const branches = overview?.organization?.branches ?? [];
+  const analyticsQuery = useMemo(() => {
+    return analyticsQueryString(analyticsBranchId, analyticsStart, analyticsEnd);
+  }, [analyticsBranchId, analyticsEnd, analyticsStart]);
+  const analyticsPath = `/analytics/summary${analyticsQuery ? `?${analyticsQuery}` : ""}`;
+  const analyticsCsvPath = `${apiBase}/analytics/tickets.csv${analyticsQuery ? `?${analyticsQuery}` : ""}`;
+
   if (!user) return <LoginPanel onLogin={setUser} />;
 
-  const branches = overview?.organization?.branches ?? [];
   const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? branches[0];
 
   async function loadAdmin(preferredBranchId?: string) {
@@ -396,7 +406,7 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
     loadAdminRequestId.current = requestId;
     const [overviewData, analyticsData] = await Promise.all([
       api<AdminOverview>("/admin/bootstrap"),
-      api<AnalyticsSummary>("/analytics/summary")
+      api<AnalyticsSummary>(analyticsPath)
     ]);
     if (requestId !== loadAdminRequestId.current) return;
     setOverview(overviewData);
@@ -512,10 +522,46 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
     setBranch(nextBranch);
   }
 
+  async function applyAnalyticsFilters(event: FormEvent) {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+    const branchId = String(formData.get("analyticsBranchId") ?? "");
+    const start = String(formData.get("analyticsStart") ?? "");
+    const end = String(formData.get("analyticsEnd") ?? "");
+    const query = analyticsQueryString(branchId, start, end);
+    setAnalyticsBranchId(branchId);
+    setAnalyticsStart(start);
+    setAnalyticsEnd(end);
+    const data = await api<AnalyticsSummary>(`/analytics/summary${query ? `?${query}` : ""}`);
+    setAnalytics(data);
+    setMessage("Analytics filters applied");
+  }
+
   return (
     <section className="page-grid">
       <h1 className="sr-only">Admin</h1>
       <Panel title="Today" icon={<BarChart3 size={18} />}>
+        <form className="analytics-filters" onSubmit={(event) => void applyAnalyticsFilters(event)}>
+          <label>
+            Analytics branch
+            <select name="analyticsBranchId" value={analyticsBranchId} onChange={(event) => setAnalyticsBranchId(event.target.value)}>
+              <option value="">All branches</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>{localName(branch, i18n.language)}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Start date
+            <input type="date" name="analyticsStart" value={analyticsStart} onChange={(event) => setAnalyticsStart(event.target.value)} />
+          </label>
+          <label>
+            End date
+            <input type="date" name="analyticsEnd" value={analyticsEnd} onChange={(event) => setAnalyticsEnd(event.target.value)} />
+          </label>
+          <button className="primary-button">Apply filters</button>
+        </form>
         <div className="metric-grid">
           <Metric label="Issued" value={analytics?.totals.issued ?? 0} />
           <Metric label="Waiting" value={analytics?.totals.waiting ?? 0} />
@@ -524,7 +570,7 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
           <Metric label="Avg wait" value={`${analytics?.totals.averageWaitMinutes ?? 0}m`} />
           <Metric label="Avg service" value={`${analytics?.totals.averageServiceMinutes ?? 0}m`} />
         </div>
-        <a className="download-link" href={`${apiBase}/analytics/tickets.csv`}>
+        <a className="download-link" href={analyticsCsvPath}>
           <Download size={16} />
           Export CSV
         </a>
@@ -984,6 +1030,18 @@ function pageTitle(path: string) {
   if (path.startsWith("/display")) return "Display";
   if (path.startsWith("/ticket/")) return "Ticket status";
   return "Kiosk";
+}
+
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function analyticsQueryString(branchId: string, start: string, end: string) {
+  const params = new URLSearchParams();
+  if (start) params.set("start", start);
+  if (end) params.set("end", end);
+  if (branchId) params.set("branchId", branchId);
+  return params.toString();
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
