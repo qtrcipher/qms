@@ -10,14 +10,16 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "test:e2e": "playwright test",
+    "test:e2e:docker": "sh -c 'docker compose down -v && docker compose up --build -d && E2E_SKIP_SERVER=1 playwright test; status=$?; docker compose down; exit $status'",
     "lint": "pnpm -r lint",
     "db:generate": "pnpm --filter @qms/api db:generate",
     "db:push": "pnpm --filter @qms/api db:push",
     "db:seed": "pnpm --filter @qms/api db:seed"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2"
   }
 }
-

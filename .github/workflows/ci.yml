@@ -24,3 +24,5 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: docker compose build api web
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e:docker
