@@ -20,9 +20,6 @@ This roadmap tracks the open-source core. Items may move as the project learns f
 - Security hardening for public deployments
 - Multi-branch dashboards
 - WhatsApp/SMS provider plugins
+- Public demo environment
 - End-to-end Playwright coverage for core queue and admin workflows
 - Arabic/English RTL/LTR foundation
-
-## Next
-
-- Public demo environment

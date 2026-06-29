@@ -24,6 +24,8 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: cp .env.example .env
+      - run: cp .env.demo.example .env.demo
+      - run: docker compose --env-file .env.demo.example -f docker-compose.demo.yml config
       - run: docker compose build api web
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e:docker

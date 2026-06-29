@@ -83,6 +83,7 @@ Operational guides:
 
 - [Infrastructure](infra/README.md)
 - [Production Deployment](infra/production.md)
+- [Public Demo Environment](infra/demo.md)
 - [Backup and Restore](infra/backup-restore.md)
 
 ## Community

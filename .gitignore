@@ -6,6 +6,7 @@ backups/
 .turbo/
 .cache/
 .env
+.env.demo
 .env.local
 *.log
 apps/api/prisma/dev.db

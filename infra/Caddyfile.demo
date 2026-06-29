@@ -1,0 +1,13 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DEMO_WEB_HOST} {
+	encode zstd gzip
+	reverse_proxy web:80
+}
+
+{$DEMO_API_HOST} {
+	encode zstd gzip
+	reverse_proxy api:3000
+}

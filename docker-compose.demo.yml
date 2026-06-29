@@ -1,0 +1,81 @@
+name: qms-demo
+
+services:
+  proxy:
+    image: caddy:2.8-alpine
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.demo}
+      DEMO_WEB_HOST: ${DEMO_WEB_HOST:?Set DEMO_WEB_HOST in .env.demo}
+      DEMO_API_HOST: ${DEMO_API_HOST:?Set DEMO_API_HOST in .env.demo}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env.demo
+    environment:
+      DATABASE_URL: postgresql://qms:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.demo}@postgres:5432/qms?schema=public
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      WEB_ORIGIN: https://${DEMO_WEB_HOST:?Set DEMO_WEB_HOST in .env.demo}
+      TRUST_PROXY: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE: https://${DEMO_API_HOST:?Set DEMO_API_HOST in .env.demo}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: qms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.demo}
+      POSTGRES_DB: qms
+    volumes:
+      - demo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qms -d qms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+
+volumes:
+  caddy-data:
+  caddy-config:
+  demo-postgres-data:
