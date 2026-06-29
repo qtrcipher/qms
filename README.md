@@ -75,9 +75,14 @@ apps/api      NestJS API, Prisma schema, seed data
 apps/web      React + Vite single-page app
 packages/domain  Shared queue types and state helpers
 packages/ui       Shared UI primitives
-infra         Deployment and operations notes
+infra         Deployment, backup, restore, and operations notes
 research      Product research references
 ```
+
+Operational guides:
+
+- [Infrastructure](infra/README.md)
+- [Backup and Restore](infra/backup-restore.md)
 
 ## Community
 
