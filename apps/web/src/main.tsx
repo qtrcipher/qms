@@ -451,15 +451,18 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
 
   async function updateRetention(event: FormEvent) {
     event.preventDefault();
+    loadAdminRequestId.current += 1;
     const form = event.currentTarget as HTMLFormElement;
     const retentionDays = Number(new FormData(form).get("ticketRetentionDays"));
-    await api<{ ticketRetentionDays: number }>("/admin/organization/settings", {
+    const updated = await api<{ ticketRetentionDays: number }>("/admin/organization/settings", {
       method: "PATCH",
       body: { ticketRetentionDays: retentionDays }
     });
-    setTicketRetentionDays(retentionDays);
+    setTicketRetentionDays(updated.ticketRetentionDays);
+    setOverview((current) => current?.organization
+      ? { organization: { ...current.organization, ticketRetentionDays: updated.ticketRetentionDays } }
+      : current);
     setMessage("Retention settings updated");
-    await loadAdmin(selectedBranch?.id);
   }
 
   async function purgeTickets() {
@@ -908,6 +911,7 @@ async function loadPublicBranch() {
 async function api<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
     method: init?.method ?? "GET",
+    cache: "no-store",
     credentials: "include",
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
     body: init?.body ? JSON.stringify(init.body) : undefined
