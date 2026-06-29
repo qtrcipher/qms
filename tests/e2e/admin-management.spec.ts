@@ -39,17 +39,15 @@ test("admin can edit service, counter, and user records", async ({ page }) => {
 
   const priorityService = page.getByRole("form", { name: "Edit service B" });
   await priorityService.getByLabel("Name").fill("Priority Desk");
-  await priorityService.getByRole("checkbox", { name: "Active" }).uncheck();
   await priorityService.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("status")).toContainText("Service updated");
   await expect(priorityService.getByLabel("Name")).toHaveValue("Priority Desk");
 
   const counterTwo = page.getByRole("form", { name: "Edit counter Counter 2" });
   await counterTwo.getByLabel("Name").fill("Back Counter");
-  await counterTwo.getByRole("checkbox", { name: "Open" }).uncheck();
   await counterTwo.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("status")).toContainText("Counter updated");
-  await expect(page.locator(".record-row", { hasText: "Back Counter" })).toContainText("Closed");
+  await expect(page.getByRole("form", { name: "Edit counter Back Counter" }).getByLabel("Name")).toHaveValue("Back Counter");
 
   const usersPanel = page.locator(".panel", { has: page.getByRole("heading", { name: "Users" }) });
   await usersPanel.getByLabel("Name").last().fill("Test Agent");

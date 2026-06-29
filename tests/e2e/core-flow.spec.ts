@@ -32,11 +32,19 @@ test("customer ticket can be called by staff and shown on the display", async ({
   await expect(staff.getByText("Admin")).toBeVisible();
   await expect(staff.getByRole("link", { name: "Staff" })).toHaveAttribute("aria-current", "page");
 
+  const counterSelect = staff.getByLabel("Counter");
+  await expect(counterSelect.locator("option")).toHaveCount(2);
+  const selectedCounterName = (await counterSelect.locator("option").nth(1).textContent())?.trim() ?? "Counter";
+  await counterSelect.selectOption({ index: 1 });
   await staff.getByRole("button", { name: /Call next .* A .* General Service/ }).click();
   await expect(staff.getByRole("status")).toContainText(`Called ${ticketCode}`);
   await expect(staff.locator(".ticket-row", { hasText: ticketCode })).toContainText("CALLED");
 
   const display = await browser.newPage();
   await display.goto("/display");
-  await expect(display.locator(".display-ticket", { hasText: ticketCode })).toContainText("Counter 1");
+  await expect(display.locator(".display-ticket", { hasText: ticketCode })).toContainText(selectedCounterName);
+
+  await staff.locator(".ticket-row", { hasText: ticketCode }).getByLabel(`Transfer ${ticketCode}`).selectOption({ label: "B" });
+  await expect(staff.getByRole("status")).toContainText("Ticket transferred");
+  await expect(staff.locator(".ticket-row", { hasText: "TRANSFERRED · B" })).toBeVisible();
 });

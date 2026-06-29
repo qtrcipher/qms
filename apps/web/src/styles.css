@@ -276,7 +276,7 @@ nav a[aria-current="page"] {
   border-radius: 8px;
   display: grid;
   gap: 8px;
-  grid-template-columns: 80px 1fr repeat(4, auto);
+  grid-template-columns: 80px minmax(120px, 1fr) repeat(6, auto) minmax(120px, auto);
   min-height: 56px;
   padding: 10px;
 }
@@ -413,6 +413,22 @@ textarea {
 .check-row input {
   min-height: 18px;
   width: 18px;
+}
+
+.counter-selector {
+  margin: 16px 0;
+}
+
+.transfer-control {
+  align-items: center;
+  color: #4d5b50;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.transfer-control select {
+  min-height: 36px;
+  padding: 6px 8px;
 }
 
 .metric-grid {

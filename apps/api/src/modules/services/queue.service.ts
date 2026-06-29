@@ -245,14 +245,14 @@ export class QueueService {
 
   async snapshot(branchId: string) {
     const tickets = await this.prisma.ticket.findMany({
-      where: { branchId, status: { in: ["WAITING", "CALLED", "SERVING"] } },
+      where: { branchId, status: { in: ["WAITING", "TRANSFERRED", "CALLED", "SERVING"] } },
       include: { service: true, counter: true },
       orderBy: { issuedAt: "asc" }
     });
 
     return {
       branchId,
-      waiting: tickets.filter((ticket) => ticket.status === "WAITING"),
+      waiting: tickets.filter((ticket) => ["WAITING", "TRANSFERRED"].includes(ticket.status)),
       called: tickets.filter((ticket) => ticket.status === "CALLED"),
       serving: tickets.filter((ticket) => ticket.status === "SERVING"),
       updatedAt: new Date().toISOString()

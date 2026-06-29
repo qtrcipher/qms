@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart3, Building2, CheckCircle2, Download, Languages, Mail, Monitor, RotateCcw, Ticket, Trash2, UserRound, UsersRound, XCircle } from "lucide-react";
+import { ArrowRightLeft, BarChart3, Building2, CheckCircle2, Download, Languages, Mail, Monitor, RotateCcw, Ticket, Trash2, Undo2, UserRound, UsersRound, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
 import { io } from "socket.io-client";
@@ -270,6 +270,12 @@ function StaffPage(context: AppContext) {
   const { branch, user, setUser, snapshot, refreshSnapshot, setMessage } = context;
   const { i18n, t } = useTranslation();
   const activeTickets = useMemo(() => [...snapshot.called, ...snapshot.serving], [snapshot.called, snapshot.serving]);
+  const [selectedCounterId, setSelectedCounterId] = useState("");
+
+  useEffect(() => {
+    if (!branch) return;
+    setSelectedCounterId((current) => branch.counters.some((counter) => counter.id === current) ? current : branch.counters[0]?.id ?? "");
+  }, [branch]);
 
   if (!user) return <LoginPanel onLogin={setUser} />;
   if (!branch) return <EmptyState label="No branch configured." />;
@@ -278,7 +284,7 @@ function StaffPage(context: AppContext) {
     if (!branch) return;
     const ticket = await api<TicketRecord | null>(`/staff/${branch.id}/services/${serviceId}/call-next`, {
       method: "POST",
-      body: { counterId: branch.counters[0]?.id }
+      body: { counterId: selectedCounterId || undefined }
     });
     setMessage(ticket ? `Called ${ticket.code}` : "No waiting tickets");
     await refreshSnapshot(branch.id);
@@ -291,10 +297,25 @@ function StaffPage(context: AppContext) {
     await refreshSnapshot(branch.id);
   }
 
+  async function transfer(ticketId: string, serviceId: string) {
+    if (!branch || !serviceId) return;
+    await api<TicketRecord>(`/staff/tickets/${ticketId}/transfer`, { method: "POST", body: { serviceId } });
+    setMessage("Ticket transferred");
+    await refreshSnapshot(branch.id);
+  }
+
   return (
     <section className="page-grid">
       <h1 className="sr-only">{t("staff")}</h1>
       <Panel title={t("staff")} icon={<UsersRound size={18} />}>
+        <label className="counter-selector">
+          Counter
+          <select value={selectedCounterId} onChange={(event) => setSelectedCounterId(event.target.value)}>
+            {branch.counters.map((counter) => (
+              <option key={counter.id} value={counter.id}>{localName(counter, i18n.language)}</option>
+            ))}
+          </select>
+        </label>
         <div className="service-list compact">
           {branch.services.map((service) => (
             <button key={service.id} onClick={() => void callNext(service.id)}>
@@ -304,10 +325,10 @@ function StaffPage(context: AppContext) {
         </div>
       </Panel>
       <Panel title="Active tickets" icon={<Ticket size={18} />}>
-        <TicketStack tickets={activeTickets} onAction={action} />
+        <TicketStack tickets={activeTickets} services={branch.services} onAction={action} onTransfer={transfer} />
       </Panel>
       <Panel title={t("waiting")} icon={<RotateCcw size={18} />}>
-        <TicketStack tickets={snapshot.waiting} />
+        <TicketStack tickets={snapshot.waiting} services={branch.services} onAction={action} onTransfer={transfer} />
       </Panel>
     </section>
   );
@@ -843,7 +864,17 @@ function QrPanel({ value, label }: { value: string; label: string }) {
   );
 }
 
-function TicketStack({ tickets, onAction }: { tickets: TicketRecord[]; onAction?: (ticketId: string, action: "start" | "complete" | "no-show" | "recall" | "requeue" | "cancel") => Promise<void> }) {
+function TicketStack({
+  tickets,
+  services = [],
+  onAction,
+  onTransfer
+}: {
+  tickets: TicketRecord[];
+  services?: Service[];
+  onAction?: (ticketId: string, action: "start" | "complete" | "no-show" | "recall" | "requeue" | "cancel") => Promise<void>;
+  onTransfer?: (ticketId: string, serviceId: string) => Promise<void>;
+}) {
   if (tickets.length === 0) return <EmptyState label="No tickets in this list." />;
 
   return (
@@ -851,11 +882,33 @@ function TicketStack({ tickets, onAction }: { tickets: TicketRecord[]; onAction?
       {tickets.map((ticket) => (
         <div className="ticket-row" key={ticket.id}>
           <strong>{ticket.code}</strong>
-          <span>{ticket.status}</span>
+          <span>{ticket.status} · {ticket.service?.prefix ?? ""}</span>
           {onAction && ticket.status === "CALLED" ? <IconAction label="Start" icon={<CheckCircle2 size={16} />} onClick={() => void onAction(ticket.id, "start")} /> : null}
           {onAction && ticket.status === "SERVING" ? <IconAction label="Complete" icon={<CheckCircle2 size={16} />} onClick={() => void onAction(ticket.id, "complete")} /> : null}
           {onAction && ticket.status === "CALLED" ? <IconAction label="Recall" icon={<RotateCcw size={16} />} onClick={() => void onAction(ticket.id, "recall")} /> : null}
           {onAction && ticket.status === "CALLED" ? <IconAction label="No-show" icon={<XCircle size={16} />} onClick={() => void onAction(ticket.id, "no-show")} /> : null}
+          {onAction && ["CALLED", "SERVING"].includes(ticket.status) ? <IconAction label="Requeue" icon={<Undo2 size={16} />} onClick={() => void onAction(ticket.id, "requeue")} /> : null}
+          {onAction && ["WAITING", "CALLED", "SERVING"].includes(ticket.status) ? <IconAction label="Cancel" icon={<XCircle size={16} />} onClick={() => void onAction(ticket.id, "cancel")} /> : null}
+          {onTransfer ? (
+            <label className="transfer-control">
+              <span className="sr-only">Transfer {ticket.code}</span>
+              <ArrowRightLeft size={16} aria-hidden="true" />
+              <select
+                aria-label={`Transfer ${ticket.code}`}
+                defaultValue=""
+                onChange={(event) => {
+                  void onTransfer(ticket.id, event.target.value);
+                }}
+              >
+                <option value="" disabled>Transfer</option>
+                {services
+                  .filter((service) => service.id !== ticket.service?.id)
+                  .map((service) => (
+                    <option key={service.id} value={service.id}>{service.prefix}</option>
+                  ))}
+              </select>
+            </label>
+          ) : null}
         </div>
       ))}
     </div>
