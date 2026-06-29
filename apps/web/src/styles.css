@@ -29,13 +29,48 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #c0d86d;
+  outline: 3px solid #1b5d43;
   outline-offset: 2px;
 }
 
 select:focus-visible {
-  outline: 3px solid #c0d86d;
+  outline: 3px solid #1b5d43;
   outline-offset: 2px;
+}
+
+main:focus {
+  outline: none;
+}
+
+.skip-link {
+  background: #ffffff;
+  border: 2px solid #1b5d43;
+  border-radius: 8px;
+  color: #123c2c;
+  font-weight: 700;
+  inset-block-start: 10px;
+  inset-inline-start: 10px;
+  padding: 10px 12px;
+  position: fixed;
+  transform: translateY(-140%);
+  transition: transform 120ms ease;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.sr-only {
+  clip: rect(0 0 0 0);
+  border: 0;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .app-shell {
@@ -76,6 +111,12 @@ nav a {
 nav a:hover {
   background: #eef6f0;
   color: #123c2c;
+}
+
+nav a[aria-current="page"] {
+  background: #dfeee4;
+  color: #123c2c;
+  font-weight: 700;
 }
 
 .shell-actions {
@@ -503,5 +544,6 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

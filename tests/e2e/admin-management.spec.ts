@@ -14,6 +14,8 @@ test.beforeEach(async ({ request }) => {
 
 test("admin can edit service, counter, and user records", async ({ page }) => {
   await page.goto("/admin");
+  await expect(page).toHaveTitle("Admin | QMS");
+  await expect(page.getByRole("link", { name: "Admin" })).toHaveAttribute("aria-current", "page");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByText("Admin")).toBeVisible();
 

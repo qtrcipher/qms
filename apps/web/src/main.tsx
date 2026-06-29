@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useId, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BarChart3, Building2, CheckCircle2, Download, Languages, Mail, Monitor, RotateCcw, Ticket, Trash2, UserRound, UsersRound, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -88,6 +88,10 @@ function App() {
     };
   }, [branch]);
 
+  useEffect(() => {
+    document.title = `${pageTitle(path)} | QMS`;
+  }, [path]);
+
   async function refreshSnapshot(branchId: string) {
     const data = await api<Snapshot>(`/display/${branchId}`);
     setSnapshot(data);
@@ -96,39 +100,54 @@ function App() {
   const context = { branch, user, snapshot, setBranch, setUser, refreshSnapshot, message, setMessage };
 
   return (
-    <main>
-      <Shell user={user} branch={branch} onLanguage={() => void i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar")} />
+    <>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <Shell
+        user={user}
+        branch={branch}
+        path={path}
+        onLanguage={() => void i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar")}
+      />
       {message ? <div className="toast" role="status">{message}</div> : null}
-      {path.startsWith("/admin") ? <AdminPage {...context} /> : null}
-      {path.startsWith("/staff") ? <StaffPage {...context} /> : null}
-      {path.startsWith("/display") ? <DisplayPage {...context} /> : null}
-      {path.startsWith("/ticket/") ? <TicketPage ticketId={path.split("/").at(-1) ?? ""} /> : null}
-      {path.startsWith("/join") || path.startsWith("/kiosk") || path === "/" ? <KioskPage {...context} /> : null}
-    </main>
+      <main id="main-content" tabIndex={-1}>
+        {path.startsWith("/admin") ? <AdminPage {...context} /> : null}
+        {path.startsWith("/staff") ? <StaffPage {...context} /> : null}
+        {path.startsWith("/display") ? <DisplayPage {...context} /> : null}
+        {path.startsWith("/ticket/") ? <TicketPage ticketId={path.split("/").at(-1) ?? ""} /> : null}
+        {path.startsWith("/join") || path.startsWith("/kiosk") || path === "/" ? <KioskPage {...context} /> : null}
+      </main>
+    </>
   );
 }
 
-function Shell({ user, branch, onLanguage }: { user: User | null; branch: Branch | null; onLanguage: () => void }) {
+function Shell({ user, branch, path, onLanguage }: { user: User | null; branch: Branch | null; path: string; onLanguage: () => void }) {
   const { i18n, t } = useTranslation();
   const branchName = localName(branch, i18n.language);
+  const navItems = [
+    { href: "/kiosk", label: t("kiosk"), active: path === "/" || path.startsWith("/kiosk") || path.startsWith("/join") },
+    { href: "/staff", label: t("staff"), active: path.startsWith("/staff") },
+    { href: "/display", label: t("display"), active: path.startsWith("/display") },
+    { href: "/admin", label: t("admin"), active: path.startsWith("/admin") }
+  ];
 
   return (
     <header className="app-shell">
       <a className="brand" href="/">
-        <Ticket size={24} />
+        <Ticket size={24} aria-hidden="true" />
         <span>QMS</span>
       </a>
       <nav aria-label="Primary">
-        <a href="/kiosk">{t("kiosk")}</a>
-        <a href="/staff">{t("staff")}</a>
-        <a href="/display">{t("display")}</a>
-        <a href="/admin">{t("admin")}</a>
+        {navItems.map((item) => (
+          <a key={item.href} href={item.href} aria-current={item.active ? "page" : undefined}>
+            {item.label}
+          </a>
+        ))}
       </nav>
       <div className="shell-actions">
         <span>{branchName || t("mainBranch")}</span>
         {user ? <span>{user.name}</span> : null}
         <button className="icon-button" onClick={onLanguage} aria-label="Change language">
-          <Languages size={18} />
+          <Languages size={18} aria-hidden="true" />
         </button>
       </div>
     </header>
@@ -160,11 +179,11 @@ function LoginPanel({ onLogin }: { onLogin: (user: User) => void }) {
       <form onSubmit={(event) => void submit(event)} className="form-grid">
         <label>
           Email
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" aria-invalid={Boolean(error)} required />
         </label>
         <label>
           Password
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" aria-invalid={Boolean(error)} required />
         </label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="primary-button">Sign in</button>
@@ -274,6 +293,7 @@ function StaffPage(context: AppContext) {
 
   return (
     <section className="page-grid">
+      <h1 className="sr-only">{t("staff")}</h1>
       <Panel title={t("staff")} icon={<UsersRound size={18} />}>
         <div className="service-list compact">
           {branch.services.map((service) => (
@@ -466,6 +486,7 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
 
   return (
     <section className="page-grid">
+      <h1 className="sr-only">Admin</h1>
       <Panel title="Today" icon={<BarChart3 size={18} />}>
         <div className="metric-grid">
           <Metric label="Issued" value={analytics?.totals.issued ?? 0} />
@@ -775,6 +796,7 @@ function TicketPage({ ticketId }: { ticketId: string }) {
 
   return (
     <section className="ticket-page">
+      <h1 className="sr-only">Ticket {ticket.code} status</h1>
       <span>Your ticket</span>
       <strong>{ticket.code}</strong>
       <p>{ticket.status} · {localName(status.service, i18n.language)}</p>
@@ -808,7 +830,7 @@ function TicketPage({ ticketId }: { ticketId: string }) {
 function QrPanel({ value, label }: { value: string; label: string }) {
   return (
     <div className="qr-panel">
-      <QRCodeSVG value={value} size={150} marginSize={2} />
+      <QRCodeSVG value={value} size={150} marginSize={2} title={label} />
       <span>{label}</span>
     </div>
   );
@@ -836,17 +858,19 @@ function TicketStack({ tickets, onAction }: { tickets: TicketRecord[]; onAction?
 function IconAction({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick: () => void }) {
   return (
     <button className="mini-button" onClick={onClick} aria-label={label} title={label}>
-      {icon}
+      <span aria-hidden="true">{icon}</span>
     </button>
   );
 }
 
 function Panel({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  const titleId = useId();
+
   return (
-    <section className="panel">
+    <section className="panel" aria-labelledby={titleId}>
       <div className="panel-title">
-        {icon}
-        <h2>{title}</h2>
+        <span aria-hidden="true">{icon}</span>
+        <h2 id={titleId}>{title}</h2>
       </div>
       {children}
     </section>
@@ -891,6 +915,14 @@ async function api<T>(path: string, init?: { method?: string; body?: unknown }):
 function localName(value: { nameEn: string; nameAr: string } | null | undefined, language: string) {
   if (!value) return "";
   return language === "ar" ? value.nameAr : value.nameEn;
+}
+
+function pageTitle(path: string) {
+  if (path.startsWith("/admin")) return "Admin";
+  if (path.startsWith("/staff")) return "Staff";
+  if (path.startsWith("/display")) return "Display";
+  if (path.startsWith("/ticket/")) return "Ticket status";
+  return "Kiosk";
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

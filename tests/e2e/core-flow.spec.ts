@@ -12,7 +12,11 @@ test("customer ticket can be called by staff and shown on the display", async ({
   }, { timeout: 30_000 }).toBe(true);
 
   await page.goto("/kiosk");
+  await expect(page).toHaveTitle("Kiosk | QMS");
   await expect(page.getByRole("heading", { name: "Choose a service" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Kiosk" })).toHaveAttribute("aria-current", "page");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
 
   await page.getByLabel("Email").fill("customer@example.com");
   await page.getByLabel("Phone").fill("+97455550000");
@@ -23,8 +27,10 @@ test("customer ticket can be called by staff and shown on the display", async ({
 
   const staff = await browser.newPage();
   await staff.goto("/staff");
+  await expect(staff).toHaveTitle("Staff | QMS");
   await staff.getByRole("button", { name: "Sign in" }).click();
   await expect(staff.getByText("Admin")).toBeVisible();
+  await expect(staff.getByRole("link", { name: "Staff" })).toHaveAttribute("aria-current", "page");
 
   await staff.getByRole("button", { name: /Call next .* A .* General Service/ }).click();
   await expect(staff.getByRole("status")).toContainText(`Called ${ticketCode}`);
