@@ -13,5 +13,6 @@ Do not open a public issue for suspected vulnerabilities. Email the maintainer w
 - Do not commit `.env` files or provider credentials.
 - Rotate `SESSION_SECRET` before production use.
 - Use HTTPS in production.
+- Keep `WEB_ORIGIN` set to the exact public HTTPS web origin.
 - Keep SMTP/SMS credentials scoped to the deployment.
-
+- Do not expose PostgreSQL or Redis ports publicly.

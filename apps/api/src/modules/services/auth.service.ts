@@ -1,19 +1,35 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { User } from "@prisma/client";
 import { verify } from "argon2";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { sessionSecret } from "../security.js";
 import { PrismaService } from "./prisma.service.js";
+
+const MAX_LOGIN_FAILURES = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+type LoginAttempt = {
+  failures: number;
+  resetAt: number;
+};
 
 @Injectable()
 export class AuthService {
+  private readonly loginAttempts = new Map<string, LoginAttempt>();
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, clientId = "unknown") {
+    const attemptKey = this.loginAttemptKey(email, clientId);
+    this.assertLoginAllowed(attemptKey);
+
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !(await verify(user.passwordHash, password))) {
+      this.recordLoginFailure(attemptKey);
       throw new UnauthorizedException("Invalid email or password");
     }
 
+    this.loginAttempts.delete(attemptKey);
     const token = this.sign(`${user.id}.${randomBytes(16).toString("hex")}`);
     return {
       token,
@@ -51,7 +67,33 @@ export class AuthService {
   }
 
   private signature(value: string) {
-    const secret = process.env.SESSION_SECRET ?? "development-secret";
-    return createHmac("sha256", secret).update(value).digest("hex");
+    return createHmac("sha256", sessionSecret()).update(value).digest("hex");
+  }
+
+  private loginAttemptKey(email: string, clientId: string) {
+    return `${email.trim().toLowerCase()}:${clientId}`;
+  }
+
+  private assertLoginAllowed(key: string) {
+    const attempt = this.loginAttempts.get(key);
+    if (!attempt) return;
+
+    if (Date.now() >= attempt.resetAt) {
+      this.loginAttempts.delete(key);
+      return;
+    }
+
+    if (attempt.failures >= MAX_LOGIN_FAILURES) {
+      throw new HttpException("Too many failed login attempts. Try again later.", HttpStatus.TOO_MANY_REQUESTS);
+    }
+  }
+
+  private recordLoginFailure(key: string) {
+    const now = Date.now();
+    const existing = this.loginAttempts.get(key);
+    const attempt = existing && now < existing.resetAt
+      ? { failures: existing.failures + 1, resetAt: existing.resetAt }
+      : { failures: 1, resetAt: now + LOGIN_WINDOW_MS };
+    this.loginAttempts.set(key, attempt);
   }
 }

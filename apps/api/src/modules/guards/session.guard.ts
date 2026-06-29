@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import type { Request } from "express";
 import type { UserRole } from "@prisma/client";
 import { AuthService } from "../services/auth.service.js";
+import { SESSION_COOKIE_NAME } from "../security.js";
 
 export interface SessionUser {
   id: string;
@@ -23,8 +24,7 @@ export class SessionGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    request.user = await this.auth.verifySessionToken(request.cookies.qms_session);
+    request.user = await this.auth.verifySessionToken(request.cookies[SESSION_COOKIE_NAME]);
     return true;
   }
 }
-

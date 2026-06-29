@@ -21,9 +21,12 @@ Set the API CORS and ticket-link origin to the public web URL:
 ```env
 NODE_ENV=production
 WEB_ORIGIN=https://qms.example.com
+TRUST_PROXY=true
 ```
 
 The API sets secure cookies when `NODE_ENV=production`; serve it only over HTTPS in that mode.
+
+When `NODE_ENV=production`, the API refuses to start unless `SESSION_SECRET` is strong and `WEB_ORIGIN` is HTTPS.
 
 ## Required Environment
 
@@ -39,6 +42,7 @@ SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_FROM=QMS <no-reply@example.com>
 WEB_ORIGIN=https://qms.example.com
+TRUST_PROXY=true
 ```
 
 Generate `SESSION_SECRET` with a password manager or:
@@ -57,10 +61,23 @@ Before deploying, create a production-specific Compose file or override with the
 - Remove public host ports for `postgres` and `redis`; only the API should reach them.
 - Remove `mailpit` and configure a real SMTP provider.
 - Set `NODE_ENV=production` and the correct `WEB_ORIGIN` for `api`.
+- Set `TRUST_PROXY=true` only when the API is behind a trusted reverse proxy that controls `X-Forwarded-For`.
 - Build `web` with the production `VITE_API_BASE`.
 - Put a reverse proxy such as Caddy, Nginx, Traefik, or a managed load balancer in front of `web` and `api`.
 
 The current API container runs `pnpm db:push` and `pnpm db:seed` on startup. The seed is idempotent for the MVP, but review this behavior before strict change-controlled production use.
+
+## Security Controls
+
+The application ships with these baseline protections:
+
+- HttpOnly session cookies with `Secure` enabled in production.
+- Production startup validation for `SESSION_SECRET` and `WEB_ORIGIN`.
+- Origin/Referer checks on unsafe API methods.
+- Login throttling after repeated failed attempts from the same email and client address.
+- API and web security headers for content sniffing, framing, referrer policy, feature policy, and static-web CSP.
+
+Keep `WEB_ORIGIN` exact. A mismatch between the browser URL and API setting will block authenticated state-changing requests.
 
 ## Reverse Proxy
 
@@ -82,7 +99,8 @@ Forward standard proxy headers and enable WebSocket upgrades for API traffic so 
 5. Sign in with the seeded owner account, then immediately change or replace the default `admin@example.com` credentials.
 6. Configure real branch, service, counter, user, and notification settings.
 7. Run a test ticket through `/kiosk`, `/staff`, `/display`, and `/ticket/:id`.
-8. Create and validate a database backup using [Backup and Restore](backup-restore.md).
+8. Confirm login, ticket creation, and admin saves work through the public HTTPS origin.
+9. Create and validate a database backup using [Backup and Restore](backup-restore.md).
 
 ## Operations
 
@@ -90,4 +108,3 @@ Forward standard proxy headers and enable WebSocket upgrades for API traffic so 
 - Schedule daily PostgreSQL backups and test restore regularly.
 - Keep `.env`, database dumps, and SMTP credentials outside Git.
 - Upgrade by backing up first, pulling the target commit, rebuilding images, and checking `/health` before reopening traffic.
-

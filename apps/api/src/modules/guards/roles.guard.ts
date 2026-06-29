@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@
 import { Reflector } from "@nestjs/core";
 import type { UserRole } from "@prisma/client";
 import { ROLES_KEY } from "../decorators/roles.decorator.js";
+import { SESSION_COOKIE_NAME } from "../security.js";
 import { AuthService } from "../services/auth.service.js";
 import type { RequestWithUser } from "./session.guard.js";
 
@@ -14,7 +15,7 @@ export class RolesGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    request.user = await this.auth.verifySessionToken(request.cookies.qms_session);
+    request.user = await this.auth.verifySessionToken(request.cookies[SESSION_COOKIE_NAME]);
 
     const roles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
       context.getHandler(),
@@ -25,4 +26,3 @@ export class RolesGuard implements CanActivate {
     throw new ForbiddenException("Insufficient role");
   }
 }
-
