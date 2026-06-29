@@ -1,0 +1,93 @@
+# Production Deployment
+
+Use this guide to turn the Docker-based MVP into a small production deployment. The default `docker-compose.yml` is convenient for development, so review each item before exposing QMS publicly.
+
+## Deployment Model
+
+Run the app behind HTTPS with separate public origins for the web app and API, for example:
+
+- Web: `https://qms.example.com`
+- API: `https://api.qms.example.com`
+
+Build the web image with the public API URL:
+
+```bash
+docker compose build --build-arg VITE_API_BASE=https://api.qms.example.com web
+docker compose build api
+```
+
+Set the API CORS and ticket-link origin to the public web URL:
+
+```env
+NODE_ENV=production
+WEB_ORIGIN=https://qms.example.com
+```
+
+The API sets secure cookies when `NODE_ENV=production`; serve it only over HTTPS in that mode.
+
+## Required Environment
+
+Create a production `.env` on the server and do not commit it. At minimum, set:
+
+```env
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://qms:REPLACE_ME@postgres:5432/qms?schema=public
+REDIS_URL=redis://redis:6379
+SESSION_SECRET=replace-with-at-least-32-random-bytes
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_FROM=QMS <no-reply@example.com>
+WEB_ORIGIN=https://qms.example.com
+```
+
+Generate `SESSION_SECRET` with a password manager or:
+
+```bash
+openssl rand -hex 32
+```
+
+Keep the same `SESSION_SECRET` across restarts unless you intentionally want to sign out all users.
+
+## Compose Hardening
+
+Before deploying, create a production-specific Compose file or override with these changes:
+
+- Replace the default Postgres password and align `DATABASE_URL`.
+- Remove public host ports for `postgres` and `redis`; only the API should reach them.
+- Remove `mailpit` and configure a real SMTP provider.
+- Set `NODE_ENV=production` and the correct `WEB_ORIGIN` for `api`.
+- Build `web` with the production `VITE_API_BASE`.
+- Put a reverse proxy such as Caddy, Nginx, Traefik, or a managed load balancer in front of `web` and `api`.
+
+The current API container runs `pnpm db:push` and `pnpm db:seed` on startup. The seed is idempotent for the MVP, but review this behavior before strict change-controlled production use.
+
+## Reverse Proxy
+
+Route public HTTPS traffic to the containers:
+
+```text
+qms.example.com      -> web:80
+api.qms.example.com  -> api:3000
+```
+
+Forward standard proxy headers and enable WebSocket upgrades for API traffic so real-time queue updates keep working.
+
+## First Launch Checklist
+
+1. Copy `.env.example` to a server-only `.env` and replace every development value.
+2. Build the web image with the public API URL.
+3. Start the stack: `docker compose up -d`.
+4. Check health: `docker compose ps` and `curl -fsS https://api.qms.example.com/health`.
+5. Sign in with the seeded owner account, then immediately change or replace the default `admin@example.com` credentials.
+6. Configure real branch, service, counter, user, and notification settings.
+7. Run a test ticket through `/kiosk`, `/staff`, `/display`, and `/ticket/:id`.
+8. Create and validate a database backup using [Backup and Restore](backup-restore.md).
+
+## Operations
+
+- Monitor container health, API logs, disk space, Postgres storage, and SMTP delivery.
+- Schedule daily PostgreSQL backups and test restore regularly.
+- Keep `.env`, database dumps, and SMTP credentials outside Git.
+- Upgrade by backing up first, pulling the target commit, rebuilding images, and checking `/health` before reopening traffic.
+
