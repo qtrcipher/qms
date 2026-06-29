@@ -30,6 +30,7 @@ test("admin can edit service, counter, and user records", async ({ page }) => {
   await todayPanel.getByLabel("End date").fill(today);
   await todayPanel.getByRole("button", { name: "Apply filters" }).click();
   await expect(page.getByRole("status")).toContainText("Analytics filters applied");
+  await expect(todayPanel.getByRole("table", { name: "Branch dashboard" })).toContainText("Main Branch");
   const exportHref = await todayPanel.getByRole("link", { name: "Export CSV" }).getAttribute("href");
   expect(exportHref).toContain(`start=${today}`);
   expect(exportHref).toContain(`end=${today}`);

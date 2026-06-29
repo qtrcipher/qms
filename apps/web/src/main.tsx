@@ -40,6 +40,20 @@ type AnalyticsSummary = {
     noShowRate: number;
   };
   services: { serviceId: string; prefix: string; nameEn: string; nameAr: string; issued: number; completed: number; noShow: number; averageWaitMinutes: number; averageServiceMinutes: number }[];
+  branchDashboard: {
+    branchId: string;
+    slug: string;
+    nameEn: string;
+    nameAr: string;
+    services: number;
+    openCounters: number;
+    issued: number;
+    waiting: number;
+    serving: number;
+    completed: number;
+    noShow: number;
+    averageWaitMinutes: number;
+  }[];
 };
 type TicketStatusView = {
   ticket: TicketRecord;
@@ -569,6 +583,37 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
           <Metric label="No-show" value={`${analytics?.totals.noShowRate ?? 0}%`} />
           <Metric label="Avg wait" value={`${analytics?.totals.averageWaitMinutes ?? 0}m`} />
           <Metric label="Avg service" value={`${analytics?.totals.averageServiceMinutes ?? 0}m`} />
+        </div>
+        <div className="branch-dashboard" aria-label="Branch dashboard">
+          <div className="dashboard-header">
+            <strong>Branch dashboard</strong>
+            <span>{analytics?.branchDashboard.length ?? 0} branches</span>
+          </div>
+          <div className="dashboard-table" role="table" aria-label="Branch dashboard">
+            <div className="dashboard-row dashboard-heading" role="row">
+              <span role="columnheader">Branch</span>
+              <span role="columnheader">Issued</span>
+              <span role="columnheader">Waiting</span>
+              <span role="columnheader">Serving</span>
+              <span role="columnheader">Completed</span>
+              <span role="columnheader">Open counters</span>
+              <span role="columnheader">Avg wait</span>
+            </div>
+            {analytics?.branchDashboard.map((row) => (
+              <div className="dashboard-row" role="row" key={row.branchId}>
+                <span role="cell">
+                  <strong>{localName(row, i18n.language)}</strong>
+                  <small>/{row.slug}</small>
+                </span>
+                <span role="cell">{row.issued}</span>
+                <span role="cell">{row.waiting}</span>
+                <span role="cell">{row.serving}</span>
+                <span role="cell">{row.completed}</span>
+                <span role="cell">{row.openCounters}</span>
+                <span role="cell">{row.averageWaitMinutes}m</span>
+              </div>
+            ))}
+          </div>
         </div>
         <a className="download-link" href={analyticsCsvPath}>
           <Download size={16} />

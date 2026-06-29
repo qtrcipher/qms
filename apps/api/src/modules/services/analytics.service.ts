@@ -43,7 +43,10 @@ export class AnalyticsService {
 
   async summary(start?: string, end?: string, branchId?: string) {
     const range = this.dateRange(start, end);
-    const tickets = await this.ticketsInRange(range.start, range.end, branchId);
+    const [tickets, branchDashboard] = await Promise.all([
+      this.ticketsInRange(range.start, range.end, branchId),
+      this.branchDashboard(range.start, range.end)
+    ]);
 
     const byStatus = tickets.reduce<Record<TicketStatus, number>>((acc, ticket) => {
       acc[ticket.status] = (acc[ticket.status] ?? 0) + 1;
@@ -112,6 +115,7 @@ export class AnalyticsService {
         averageWaitMinutes: average(service.waitDurations),
         averageServiceMinutes: average(service.serviceDurations)
       })),
+      branchDashboard,
       hourlyArrivals
     };
   }
@@ -149,6 +153,45 @@ export class AnalyticsService {
       where: { issuedAt: { gte: start, lt: end }, ...(branchId ? { branchId } : {}) },
       include: { branch: true, service: true, counter: true },
       orderBy: { issuedAt: "asc" }
+    });
+  }
+
+  private async branchDashboard(start: Date, end: Date) {
+    const branches = await this.prisma.branch.findMany({
+      include: {
+        counters: true,
+        services: true,
+        tickets: {
+          where: { issuedAt: { gte: start, lt: end } },
+          orderBy: { issuedAt: "asc" }
+        }
+      },
+      orderBy: { nameEn: "asc" }
+    });
+
+    return branches.map((branch) => {
+      const byStatus = branch.tickets.reduce<Record<TicketStatus, number>>((acc, ticket) => {
+        acc[ticket.status] = (acc[ticket.status] ?? 0) + 1;
+        return acc;
+      }, {} as Record<TicketStatus, number>);
+      const waitDurations = branch.tickets
+        .map((ticket) => minutesBetween(ticket.issuedAt, ticket.calledAt))
+        .filter((value): value is number => value !== null);
+
+      return {
+        branchId: branch.id,
+        slug: branch.slug,
+        nameEn: branch.nameEn,
+        nameAr: branch.nameAr,
+        services: branch.services.filter((service) => service.isActive).length,
+        openCounters: branch.counters.filter((counter) => counter.isOpen).length,
+        issued: branch.tickets.length,
+        waiting: byStatus.WAITING ?? 0,
+        serving: (byStatus.CALLED ?? 0) + (byStatus.SERVING ?? 0),
+        completed: byStatus.COMPLETED ?? 0,
+        noShow: byStatus.NO_SHOW ?? 0,
+        averageWaitMinutes: average(waitDurations)
+      };
     });
   }
 }

@@ -465,6 +465,55 @@ textarea {
   font-size: 24px;
 }
 
+.branch-dashboard {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.dashboard-header,
+.dashboard-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-header {
+  color: #4d5b50;
+  grid-template-columns: 1fr auto;
+}
+
+.dashboard-table {
+  border: 1px solid #dfe5dc;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.dashboard-row {
+  grid-template-columns: minmax(150px, 1.4fr) repeat(6, minmax(84px, 1fr));
+  min-width: 720px;
+  padding: 10px 12px;
+}
+
+.dashboard-row + .dashboard-row {
+  border-top: 1px solid #dfe5dc;
+}
+
+.dashboard-heading {
+  background: #f7f8f4;
+  color: #4d5b50;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-row span {
+  display: grid;
+}
+
+.dashboard-row small {
+  color: #637064;
+}
+
 .download-link {
   align-items: center;
   background: #1e6b4d;
