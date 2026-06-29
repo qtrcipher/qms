@@ -299,6 +299,40 @@ select {
   gap: 8px;
 }
 
+.metric-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric {
+  background: #f7f8f4;
+  border: 1px solid #dfe5dc;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.metric span,
+.metric strong {
+  display: block;
+}
+
+.metric strong {
+  font-size: 24px;
+}
+
+.download-link {
+  align-items: center;
+  background: #1e6b4d;
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 14px;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
 .table-list div {
   align-items: center;
   background: #f7f8f4;
@@ -381,7 +415,8 @@ select {
   .kiosk-services,
   .compact,
   .ticket-row,
-  .status-metrics {
+  .status-metrics,
+  .metric-grid {
     grid-template-columns: 1fr;
   }
 }

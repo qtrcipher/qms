@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Building2, CheckCircle2, Languages, Monitor, RotateCcw, Ticket, UserRound, UsersRound, XCircle } from "lucide-react";
+import { BarChart3, Building2, CheckCircle2, Download, Languages, Monitor, RotateCcw, Ticket, UserRound, UsersRound, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
 import { io } from "socket.io-client";
@@ -14,6 +14,23 @@ type User = { id: string; email: string; name: string; role: string };
 type TicketRecord = { id: string; code: string; status: string; service?: Service; counter?: Counter | null; events?: { status: string; note?: string }[] };
 type Snapshot = { waiting: TicketRecord[]; called: TicketRecord[]; serving: TicketRecord[]; updatedAt?: string };
 type AdminOverview = { organization: { name: string; branches: Branch[]; users: User[] } | null };
+type AnalyticsSummary = {
+  totals: {
+    issued: number;
+    waiting: number;
+    called: number;
+    serving: number;
+    completed: number;
+    noShow: number;
+    cancelled: number;
+    transferred: number;
+    averageWaitMinutes: number;
+    averageServiceMinutes: number;
+    completionRate: number;
+    noShowRate: number;
+  };
+  services: { serviceId: string; prefix: string; nameEn: string; nameAr: string; issued: number; completed: number; noShow: number; averageWaitMinutes: number; averageServiceMinutes: number }[];
+};
 type TicketStatusView = {
   ticket: TicketRecord;
   branch: Branch;
@@ -267,6 +284,7 @@ function DisplayPage({ branch, snapshot }: AppContext) {
 function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
   const { i18n } = useTranslation();
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [branchName, setBranchName] = useState("");
   const [branchSlug, setBranchSlug] = useState("");
   const [serviceName, setServiceName] = useState("");
@@ -287,9 +305,13 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
   const selectedBranch = branches[0];
 
   async function loadAdmin() {
-    const data = await api<AdminOverview>("/admin/bootstrap");
-    setOverview(data);
-    setBranch(data.organization?.branches[0] ?? null);
+    const [overviewData, analyticsData] = await Promise.all([
+      api<AdminOverview>("/admin/bootstrap"),
+      api<AnalyticsSummary>("/analytics/summary")
+    ]);
+    setOverview(overviewData);
+    setAnalytics(analyticsData);
+    setBranch(overviewData.organization?.branches[0] ?? null);
   }
 
   async function createBranch(event: FormEvent) {
@@ -345,6 +367,20 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
 
   return (
     <section className="page-grid">
+      <Panel title="Today" icon={<BarChart3 size={18} />}>
+        <div className="metric-grid">
+          <Metric label="Issued" value={analytics?.totals.issued ?? 0} />
+          <Metric label="Waiting" value={analytics?.totals.waiting ?? 0} />
+          <Metric label="Completed" value={analytics?.totals.completed ?? 0} />
+          <Metric label="No-show" value={`${analytics?.totals.noShowRate ?? 0}%`} />
+          <Metric label="Avg wait" value={`${analytics?.totals.averageWaitMinutes ?? 0}m`} />
+          <Metric label="Avg service" value={`${analytics?.totals.averageServiceMinutes ?? 0}m`} />
+        </div>
+        <a className="download-link" href={`${apiBase}/analytics/tickets.csv`}>
+          <Download size={16} />
+          Export CSV
+        </a>
+      </Panel>
       <Panel title="Branches" icon={<Building2 size={18} />}>
         <div className="table-list">
           {branches.map((branch) => (
@@ -365,7 +401,7 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
           {selectedBranch?.services.map((service) => (
             <div key={service.id}>
               <strong>{service.prefix}</strong>
-              <span>{localName(service, i18n.language)}</span>
+              <span>{localName(service, i18n.language)} · {analytics?.services.find((row) => row.serviceId === service.id)?.issued ?? 0} issued</span>
             </div>
           ))}
         </div>
@@ -415,6 +451,15 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
         </form>
       </Panel>
     </section>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
