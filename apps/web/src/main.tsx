@@ -370,10 +370,13 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
 
   async function updateRetention(event: FormEvent) {
     event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const retentionDays = Number(new FormData(form).get("ticketRetentionDays"));
     await api<{ ticketRetentionDays: number }>("/admin/organization/settings", {
       method: "PATCH",
-      body: { ticketRetentionDays }
+      body: { ticketRetentionDays: retentionDays }
     });
+    setTicketRetentionDays(retentionDays);
     setMessage("Retention settings updated");
     await loadAdmin();
   }
@@ -408,6 +411,7 @@ function AdminPage({ user, setUser, setBranch, setMessage }: AppContext) {
               type="number"
               min={1}
               max={3650}
+              name="ticketRetentionDays"
               value={ticketRetentionDays}
               onChange={(event) => setTicketRetentionDays(Number(event.target.value))}
               required
